@@ -1,0 +1,203 @@
+#include "util.c"
+
+int theFD, theErr;
+
+  // print a screen of information:
+
+int printScreen ()
+{
+  int bytesRead, i = 0, j = 0;
+  int bufSize = 80;
+  int crCount = 0;
+  char buffer[bufSize];
+
+  //bytesRead = read (theFD, buffer, bufSize);
+  bytesRead = read (theFD, buffer, 1);
+  //buffer[bytesRead] = 0;
+  while (i < 24 && bytesRead > 0)
+  {
+    if (buffer[0] == '\n')
+    {
+      mputc ('\n');
+      i++;
+
+    } // end if we encounter a CR
+    else
+    {
+      mputc (buffer[0]);
+    } // end if not CR, print character
+
+    buffer[0] = 0;
+    bytesRead = read (theFD, buffer, 1);
+    /*
+      // print characters one at a time to handle
+      // carriage returns properly:
+
+    for (j = 0; j < 80; j++)
+    {
+      if (buffer[j] == '\r')
+      {
+        //printf ("%c", '\n');
+        mputc ('\n');
+      } // end if carriage return, print appropriately
+      else
+      {
+        //printf ("%c", buffer[j]);
+        mputc (buffer[j]);
+      } // end if not carriage return print what we see
+    }// end print characters
+    //printf ("%s", buffer);
+    mybzero (buffer, bufSize);
+
+    bytesRead = read (theFD, buffer, bufSize);
+    i++;
+    */
+
+  } // end while loop
+
+  return bytesRead;
+
+} // end printScreen function
+
+
+// readUser:
+
+int readUser ()
+{
+  char userInput;
+
+  userInput = getc ();
+
+  if (userInput == ' ')
+  {
+    return 0;
+  } // end if space, return 0
+  else
+  {
+    return 1;
+  } // end else return 1
+} // end readUser
+
+// getUser function: get user input:
+
+int getUser ()
+{
+  char userInput;
+  int pid, pd2[2];
+  int retValue;
+
+  /*
+  userInput = getc ();
+  if (userInput == ' ')
+  {
+    return (0);
+  }
+  else
+  {
+    return (1);
+  }
+  */
+
+
+  pipe (pd2);
+
+  pid = fork ();
+  printf ("pid: %d\n", pid);
+
+    // parent:
+
+  if (pid)
+  {
+    printf ("*** inside (pid)%c", '\n');
+
+    close (1);
+    dup2 (pd2[0], 0);
+    close (0);
+
+    retValue = readUser ();
+
+    printf ("\n\nretValue: %d\n\n\n", retValue);
+
+    return retValue;
+
+  } // end if pid
+  else
+  {
+    printf ("*~* in else%c", '\n');
+  }
+
+  //return 0;
+
+} // end getUser function
+
+  // main function
+
+int main (int argc, char * argv[])
+{
+  int bytesRead, lineNum, i = 0, j = 0;
+  int bufSize = 80;
+  char buffer[bufSize], userInput;
+  char readChar;
+  int pid, pd[2];
+
+  printf ("\t\t\t~~~ my more called ~~~%c", '\n');
+
+    // if there is an argument, it is the file we need to open:
+    // else, get the input from stdin:
+
+  if (argc > 1)
+  {
+    theFD = open (argv[1], O_RDONLY);
+  } // end if there is an argument
+  else
+  {
+    theFD = dup(0);
+  } // end there is no argument
+
+      // error checking:
+
+    if (theFD < 0)
+    {
+      printf ("cannot open file %s\n", argv[1]);
+      return 0;
+    } // end if open fails
+
+    printScreen ();
+
+    bytesRead = read (theFD, buffer, 1);
+
+    while (bytesRead > 0)
+    {
+        userInput = getc ();
+        //userInput = getUser ();
+
+        if (userInput == ' ')
+        //if (userInput == 0)
+        {
+          //printf ("*** Here ***%c", '\n');
+          bytesRead = printScreen ();
+        } // end if user presses spacebar
+        else
+        {
+            // print characters one at a time to handle
+            // carriage returns properly:
+
+          while (buffer[0] != '\n' && bytesRead > 0)
+          {
+            mputc (buffer[0]);
+            buffer[0] = 0;
+            bytesRead = read (theFD, buffer, 1);
+          }
+          mputc ('\n');
+
+          bytesRead = read (theFD, buffer, 1);
+
+        } // end user pushes a different key
+
+    } // end while loop
+
+  close (theFD);
+
+  return 0;
+
+} // end main function

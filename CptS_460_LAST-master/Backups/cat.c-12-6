@@ -1,0 +1,78 @@
+#include "util.c"
+
+int main (int argc, char * argv[])
+{
+  int theFD, n = 0, i = 0;
+  int bufSize = 80, bytesRead;
+  char buffer[bufSize]; // max size of all direct blocks
+  char readChar; // for stdin
+  int theWriteFD;
+  char myBuf[1];
+  char myHead[15] = {"~~~~~"};
+
+  printf ("\t\t\t~~~ my cat ~~~%c\n", ' ');
+  //write (2, myHead, 5);
+  //fprintf (err, "i am stderr\n");
+
+    // if there is no argument, read from stdin:
+
+  if (argc == 1)
+  {
+    theFD = dup (0);
+
+    while (read (theFD, &readChar, 1) > 0)
+    {
+      if (readChar == '\r')
+      {
+        printf ("%c\n", ' ');
+
+      } // end add new line and carriage return
+      else
+      {
+        mputc (readChar);
+      } // end if not CR
+
+    } // end while loop
+
+  } // end there is no argument
+
+      // if there is an argument (a file to cat) :
+
+  if (argc == 2)
+  {
+      theFD = open (argv[1], O_RDONLY);
+
+      if (theFD < 0)
+      {
+        printf ("cannot open file %s\n", argv[1]);
+        exit (0);
+      } // end if file fails to open
+      else
+      {
+        //bytesRead = read (theFD, buffer, bufSize);
+        bytesRead = read (theFD, buffer, 1);
+        //buffer[bytesRead] = 0;
+        while (bytesRead > 0)
+        {
+          //printf ("%s", buffer);
+          //mybzero (buffer, bufSize);
+          mputc (buffer[0]);
+          buffer[0] = 0;
+
+          //bytesRead = read (theFD, buffer, bufSize);
+          bytesRead = read (theFD, buffer, 1);
+          i++;
+
+        } // end while loop
+      } // end file opened successfully
+
+      close (theFD);
+
+  } // end if there is an argument,cat a file
+
+
+  printf ("\t\t\t~~~ end my cat ~~~\n%c", ' ');
+
+  return 0;
+
+} // end main function

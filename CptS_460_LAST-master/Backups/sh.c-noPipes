@@ -1,0 +1,58 @@
+/* sh.c */
+
+//#include "ucode.c"
+#include "util.c"
+
+
+
+main (int argc, char *argv[])
+{
+  int pid, status;
+  char cmd[32], theCmd[32];
+  char cmdPrefix[5] = {"/bin/"};
+  char *tokens[16];
+  char buf[32];
+
+  while (1)
+  {
+
+    printf("Select a command: ");
+    //getline(cmd);
+    gets(cmd);
+    printf ("You entered: %s\n", cmd);
+
+    if (strcmp (cmd, "logout") == 0)
+    {
+      printf ("Logging out\n%d",0);
+      exit (0);
+      //return (0);
+    } // end if exit
+
+    strcpy (buf, cmd);
+    tokenize (buf, tokens, ' ');
+
+    if (strcmp (tokens[0], "cd") == 0)
+    {
+      printf ("tokens[1]: %s\n", tokens[1]);
+      chdir (tokens[1]);
+    }
+
+
+    // for a child process to execute the cmd line
+    pid = fork ();
+
+    if (pid)  // parent waits for child to die
+    {
+      pid = wait (&status);
+    } // end if pid
+    else
+    {
+      //strcpy (theCmd, cmdPrefix);
+      //strcat (theCmd, cmd);
+      //printf ("theCmd: %s\n", theCmd);
+      //exec (theCmd);
+      exec (cmd);
+    } // end else
+
+  } // end while
+} // end main

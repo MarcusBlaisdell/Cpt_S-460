@@ -1,0 +1,241 @@
+/* sh.c */
+
+//#include "ucode.c"
+#include "util.c"
+
+  // do_pipe function
+  // multiple pipes are handled recursively from right to left:
+
+int do_pipe (char *cmd, int *pd)
+{
+  int pid, pd2[2];
+  int hasPipe = 0;
+  char *head = "", *tail = "";
+
+    // if a pipe was passed in, we are writer on pipe pd
+  if (pd)
+  {
+    close (pd[0]);
+    dup2 (pd[1], 1);
+    close (pd[1]);
+  } // end if pipe was passed in
+
+  // divide cmd into head, tail by rightmost pipe symbol:
+  hasPipe = scan (cmd, &head, &tail);
+  printf ("head: %s - tail: %s\n", head, tail);
+
+    // if there is a pipe, handle it:
+  if (hasPipe == 1)
+  {
+    pipe (pd2);
+    pid = fork ();
+
+    if (pid)
+    {
+      close (pd2[1]);
+      dup2 (pd2[0], 0);
+      close (pd2[0]);
+
+      exec (tail);
+    } // end if pid
+    // if there are more pipes, recursively call head:
+    else
+    {
+      if (testForPipe(head))
+      {
+        do_pipe (head, pd2);
+      }
+      else
+      {
+          // close pipe READ end
+        close (pd2[0]);
+          // redirect stdout to pipe WRITE end
+        dup2 (pd2[1], 1);
+
+        exec (head);
+      } // end if no more pipes, execute the head
+
+    } // end else, recursively call head
+
+  } // end if hasPipe flag is yes
+  else
+  {
+    return 1;
+    //exec (cmd);
+  } // end if no pipe, execute the command
+  /*
+  pipe (pd);    // create a pipe: pd[0] = READ, pd[1] = WRITE
+  pid = fork ();
+
+  if (pid)
+  {
+      // close pipe WRITE end
+    close (pd[1]);
+      // redirect stdin to pipe READ end
+    dup2 (pd[0], 0);
+
+    exec (cmd2);
+  } // end if pid
+  else // child : as pipe WRITER
+  {
+      // close pipe READ end
+    close (pd[0]);
+      // redirect stdout to pipe WRITE end
+    dup2 (pd[1], 1);
+
+    exec (cmd1);
+  } // end else
+  */
+} // end do_pipe function
+
+
+// scan function:
+
+int scan (char * cmd, char ** head, char ** tail)
+{
+  int cmdLength, i = 0, j = 0;
+
+  // we have to divide the command into the pre-pipe part and the post-pipe part:
+  // since there may be multiple pipes, and we have to call them recursively
+  // from the right to the left, the pre-pipe part will be every thing that
+  // comes before the last pipe and the post-pipe part will be everything
+  // that comes after the last pipe, so, we need to find the last pipe,
+  // use pointers to variables outside the function:
+
+  char *pointer = cmd;
+
+    // move pointer to the end of the command:
+  while (*pointer)
+  {
+    *pointer++;
+  } // end move to end of command
+
+  while (*pointer != '|' && *pointer != *cmd)
+  {
+    *pointer--;
+  } // end look for last pipe
+
+  if (*pointer == '|')
+  {
+    *pointer = 0;
+    *head = cmd;
+    *pointer++; // move past pointer:
+    *pointer++; // move past space after pointer:
+    *tail = pointer;
+
+    return 1;
+  } // end we found a pipe
+  // if we did not find a pipe:
+  else
+  {
+    return 0;
+  } // end no pipe found
+
+  return 1;
+
+} // end scan function
+
+// testForPipe function:
+
+int testForPipe (char *cmd)
+{
+  int i = 0;
+
+  while (cmd[i] != 0)
+  {
+      // if a pipe is found, return 1
+    if (cmd[i] == '|')
+    {
+      return 1;
+    } // end if we find a pipe, return 1 for yes
+    i++;
+
+  } // end while loop to look for pipe
+
+  // if we get here, no pipe was found, return 0:
+
+  return 0;
+
+} // end testForPipe function
+
+main (int argc, char *argv[])
+{
+  int pid, status;
+  char cmd[32], theCmd[32];
+  char cmdPrefix[5] = {"/bin/"};
+  char *tokens[16];
+  char buf[32];
+  int pipeFlag = 0;
+
+  while (1)
+  {
+
+    printf("Select a command: ");
+    //getline(cmd);
+    gets(cmd);
+    //printf ("You entered: %s\n", cmd);
+
+      // tokenize input:
+
+    strcpy (buf, cmd);
+    tokenize (buf, tokens, ' ');
+
+      // if logout, just logout, don't do any more evaluation:
+
+    if (strcmp (tokens[0], "logout") == 0)
+    {
+      printf ("Logging out\n%d",0);
+      exit (0);
+    } // end if exit
+
+      // if cd, call chdir:
+
+    if (strcmp (tokens[0], "cd") == 0)
+    {
+      printf ("tokens[1]: %s\n", tokens[1]);
+      chdir (tokens[1]);
+    } // end if cd
+
+      // check for a pipe, a 0 is no-pipe, 1 is pipe exists:
+
+    pipeFlag = testForPipe (cmd);
+
+    if (pipeFlag == 1)
+    {
+      printf ("pipe found%c", '\n');
+      pid = fork ();
+
+      if (pid)  // parent waits for child to die
+      {
+        pid = wait (&status);
+      } // end if pid
+      else
+      {
+        do_pipe (cmd, 0);
+      } // end else
+
+    } // end if a pipe was found
+
+    else
+    {
+      printf ("no pipe%c", '\n');
+
+      // for a child process to execute the cmd line
+      pid = fork ();
+
+      if (pid)  // parent waits for child to die
+      {
+        pid = wait (&status);
+      } // end if pid
+      else
+      {
+        //strcpy (theCmd, cmdPrefix);
+        //strcat (theCmd, cmd);
+        //printf ("theCmd: %s\n", theCmd);
+        //exec (theCmd);
+        exec (cmd);
+      } // end else
+    } // end no pipe was found
+
+  } // end while
+} // end main

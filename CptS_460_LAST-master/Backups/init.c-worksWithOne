@@ -1,0 +1,68 @@
+// init.c
+//#include "ucode.c"
+//#include "uart.c"
+#include "util.c"
+
+int console1;
+
+	// parent function for main terminal
+
+int parent()		// P1's code
+{
+	int pid, status;
+
+	while (1)
+	{
+		printf ("INIT : wait for ZOMBIE child%c\n", ' ');
+		pid = wait (&status);
+
+			// if console1 login process died
+		if (pid == console1)
+		{
+			printf ("INIT-1: forks a new console1 login%c\n", ' ');
+			console1 = fork ();	// fork another one
+
+			if (console1)
+			{
+				continue;
+			} // end if console1 is valid
+			else
+			{
+				exec ("login /dev/tty0");	// new console1 login process
+			} // end else
+
+		} // end if pid == console1
+		//else
+		//{
+			printf ("INIT: I just buried an orphan child proc %d\n", pid);
+		//}
+
+
+	} // end while
+
+} // end parent function
+
+main ()
+{
+	int in, out;						// file descriptors for terminal I/O
+
+	in = open ("/dev/tty0", O_RDONLY); 	// file descriptor 0
+	out = open ("dev/tty0", O_WRONLY);	// for display to console1
+
+	printf ("INIT : fork a login proc on console1%c\n", ' ');
+
+	console1 = fork ();
+
+	if (!console1)
+	//{
+		//parent ();
+	//}
+	//else
+	{
+		exec ("login /dev/tty0");
+
+	} // end if console1 died, relaunch it
+
+	parent ();
+
+} // end main
